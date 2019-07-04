@@ -14,7 +14,7 @@ public class Font
 
 	public Font(String path)
 	{
-		fontImage = new Image(path);
+		fontImage = new Image(path, false);
 
 		offsets = new int[NUM_CHARACTERS];
 		widths = new int[NUM_CHARACTERS];

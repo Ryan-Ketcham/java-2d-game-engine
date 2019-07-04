@@ -8,9 +8,11 @@ import javax.imageio.ImageIO;
 public class Image
 {
     private int width, height;
-    private int[] p;
+    private int[] pixels;
 
-    public Image(String path)
+    private boolean alpha;
+
+    public Image(String path, boolean alpha)
     {
         BufferedImage image = null;
         try
@@ -24,9 +26,18 @@ public class Image
 
         width = image.getWidth();
         height = image.getHeight();
-        p = image.getRGB(0, 0, width, height, null, 0, width);
+        pixels = image.getRGB(0, 0, width, height, null, 0, width);
+        this.alpha = alpha;
 
         image.flush();
+    }
+
+    public Image(int[] pixels, int width, int height, boolean alpha)
+    {
+        this.pixels = pixels;
+        this.width = width;
+        this.height = height;
+        this.alpha = alpha;
     }
 
     public int getWidth()
@@ -41,6 +52,17 @@ public class Image
 
     public int[] getPixels()
     {
-        return p;
+        return pixels;
     }
+
+    public boolean isAlpha()
+    {
+        return alpha;
+    }
+
+    public void setAlpha(boolean alpha)
+    {
+        this.alpha = alpha;
+    }
+
 }

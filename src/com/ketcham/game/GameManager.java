@@ -12,7 +12,9 @@ import com.ketcham.engine.sfx.SoundClip;
 
 public class GameManager extends AbstractGame
 {
-    private ImageTile image;
+    private Image mouseImage;
+    private Image image2;
+    private ImageTile imageTile;
     private SoundClip clip;
 
     public static void main(String[] args)
@@ -23,8 +25,10 @@ public class GameManager extends AbstractGame
 
     public GameManager()
     {
-        //image = new Image("/test.png");
-        image = new ImageTile("/test_tile.png", 16, 16);
+        mouseImage = new Image("/test.png", true);
+        image2 = new Image("/test_2.png", true);
+        imageTile = new ImageTile("/test_tile.png", true, 16, 16);
+        //imageTile.setAlpha(true);
         clip = new SoundClip("/audio/test_sound.wav");
     }
 
@@ -33,13 +37,23 @@ public class GameManager extends AbstractGame
     {
         if (gc.getInput().isButtonDown(MouseEvent.BUTTON1))
         {
-            clip.play();
+            //clip.play();
+        }
+        if (gc.getInput().isKey(KeyEvent.VK_ESCAPE))
+        {
+            //gc.stop();
         }
     }
 
     @Override
     public void render(GameContainer gc, Renderer r)
     {
-        r.drawImageTile(image, gc.getInput().getMouseX()-8, gc.getInput().getMouseY()-64, 0, 0);
+        r.setZDepth(0);
+        r.drawImage(image2, 10, 10);
+        r.setZDepth(Integer.MAX_VALUE);
+        r.drawImage(mouseImage, gc.getInput().getMouseX()-8, gc.getInput().getMouseY()-64);
+        r.setZDepth(Integer.MAX_VALUE-1);
+        r.drawImageTile(imageTile, 10, 10, 1, 0);
+        //r.fillRect(gc.getInput().getMouseX()-50, gc.getInput().getMouseY()-100, 100, 100, 0xffffccff);
     }
 }
