@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/starcraft-clone.iml" filepath="$PROJECT_DIR$/starcraft-clone.iml" />
+      <module fileurl="file://$PROJECT_DIR$/my-2d-game-engine-java.iml" filepath="$PROJECT_DIR$/my-2d-game-engine-java.iml" />
     </modules>
   </component>
 </project>
