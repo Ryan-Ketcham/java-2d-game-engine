@@ -4,20 +4,21 @@ import java.awt.image.DataBufferInt;
 import java.util.ArrayList;
 import java.util.Collections;
 
-import com.ketcham.engine.gfx.Font;
-import com.ketcham.engine.gfx.Image;
-import com.ketcham.engine.gfx.ImageRequest;
-import com.ketcham.engine.gfx.ImageTile;
+import com.ketcham.engine.gfx.*;
 
 public class Renderer
 {
 	private Font font = Font.STANDARD;
-	private ArrayList<ImageRequest> imageRequests;
+	private ArrayList<ImageRequest> imageRequests = new ArrayList<ImageRequest>();
+	private ArrayList<LightRequest> lightRequests = new ArrayList<LightRequest>();
 
 	private int maxWidth, maxHeight;
 	private int[] pixels;
 	private int[] zBuffer;
+	private int[] lightMap;
+	private int[] lightBlocks;
 
+	private int ambientColor = 0xff242424;
 	private int zDepth = 0;
 	private boolean processing = false;
 
@@ -27,7 +28,8 @@ public class Renderer
 		maxHeight = gc.getHeight();
 		pixels = ((DataBufferInt) gc.getWindow().getImage().getRaster().getDataBuffer()).getData();
 		zBuffer = new int[pixels.length];
-		imageRequests = new ArrayList<ImageRequest>();
+		lightMap = new int[pixels.length];
+		lightBlocks = new int[pixels.length];
 	}
 
 	public void clear()
@@ -36,6 +38,8 @@ public class Renderer
 		{
 			pixels[i] = 0;
 			zBuffer[i] = 0;
+			lightMap[i] = ambientColor;
+			lightBlocks[i] = 0;
 		}
 	}
 
@@ -45,20 +49,38 @@ public class Renderer
 
 		Collections.sort(imageRequests, (o1, o2) ->
 		{
-			if (o1.getzDepth() < o2.getzDepth())
+			if (o1.getZDepth() < o2.getZDepth())
 				return -1;
-			if (o1.getzDepth() > o2.getzDepth())
+			if (o1.getZDepth() > o2.getZDepth())
 				return 1;
 			return 0;
 		});
 
+		// Draw Alpha images
 		for (ImageRequest request : imageRequests)
 		{
-			setZDepth(request.getzDepth());
+			setZDepth(request.getZDepth());
 			drawImage(request.getImage(), request.getOffX(), request.getOffY());
 		}
 
+		// Draw lighting
+		for (LightRequest request : lightRequests)
+		{
+			setZDepth(request.getZDepth());
+			drawLight(request.getLight(), request.getOffX(), request.getOffY());
+		}
+
+		for (int i = 0; i < pixels.length; i++)
+		{
+			float r = ((lightMap[i] >> 16) & 0xff) / 255f;
+			float g = ((lightMap[i] >> 8) & 0xff) / 255f;
+			float b = (lightMap[i] & 0xff) / 255f;
+
+			pixels[i] = ((int) (((pixels[i] >> 16) & 0xff) * r)) << 16 | ((int) (((pixels[i] >> 8) & 0xff) * g)) << 8 | (int) ((pixels[i] & 0xff) * b);
+		}
+
 		imageRequests.clear();
+		lightRequests.clear();
 		processing = false;
 	}
 
@@ -75,31 +97,63 @@ public class Renderer
 		if (zBuffer[index] > zDepth)
 			return;
 
+		zBuffer[index] = zDepth;
+
 		if (alpha == 255)
 		{
 			pixels[index] = value;
 		}
 		else
 		{
-			int pixelColor = pixels[index];
+			int baseColor = pixels[index];
 
-			int newRed = ((pixelColor >> 16) & 0xff) - (int) ((((pixelColor >> 16) & 0xff) - ((value >> 16) & 0xff)) * (alpha / 255f));
-			int newGreen = ((pixelColor >> 8) & 0xff) - (int) ((((pixelColor >> 8) & 0xff) - ((value >> 8) & 0xff)) * (alpha / 255f));
-			int newBlue = (pixelColor & 0xff) - (int) (((pixelColor & 0xff) - (value & 0xff)) * (alpha / 255f));
+			int newRed = ((baseColor >> 16) & 0xff) - (int) ((((baseColor >> 16) & 0xff) - ((value >> 16) & 0xff)) * (alpha / 255f));
+			int newGreen = ((baseColor >> 8) & 0xff) - (int) ((((baseColor >> 8) & 0xff) - ((value >> 8) & 0xff)) * (alpha / 255f));
+			int newBlue = (baseColor & 0xff) - (int) (((baseColor & 0xff) - (value & 0xff)) * (alpha / 255f));
 
-			pixels[index] = (255 << 24 | newRed << 16 | newGreen << 8 | newBlue);
+			pixels[index] = newRed << 16 | newGreen << 8 | newBlue;
 		}
+	}
+
+	public void setLightMap(int x, int y, int value)
+	{
+		// Check if the pixel is off screen
+		if (x < 0 || x >= maxWidth || y < 0 || y >= maxHeight)
+			return;
+
+		int baseColor = lightMap[x + y * maxWidth];
+
+		int maxRed = Math.max((baseColor >> 16) & 0xff, (value >> 16) & 0xff);
+		int maxGreen = Math.max((baseColor >> 8) & 0xff, (value >> 8) & 0xff);
+		int maxBlue = Math.max(baseColor & 0xff, value & 0xff);
+
+		lightMap[x + y * maxWidth] = maxRed << 16 | maxGreen << 8 | maxBlue;
+	}
+
+	public void setLightBlock(int x, int y, int value)
+	{
+		// Check if the pixel is off screen
+		if (x < 0 || x >= maxWidth || y < 0 || y >= maxHeight)
+			return;
+
+		if (zBuffer[x + y * maxWidth] > zDepth)
+			return;
+
+		lightBlocks[x + y * maxWidth] = value;
 	}
 
 	public void drawText(String text, int offX, int offY, int color)
 	{
-		text = text.toUpperCase();
+		if (Font.IS_UPPER_CASE)
+		{
+			text = text.toUpperCase();
+		}
 		Image fontImage = font.getFontImage();
 		int offset = 0;
 
 		for (int i = 0; i < text.length(); i++)
 		{
-			int unicode = text.codePointAt(i) - 32; // 32 makes "Space" == 0
+			int unicode = text.codePointAt(i) - Font.STARTING_CHARACTER;
 
 			for (int y = 0; y < fontImage.getHeight(); y++)
 			{
@@ -153,6 +207,7 @@ public class Renderer
 			for (int x = newX; x < newWidth; x++)
 			{
 				setPixel(x + offX, y + offY, image.getPixels()[x + y * image.getWidth()]);
+				setLightBlock(x + offX, y + offY, image.getLightBlock());
 			}
 		}
 	}
@@ -195,6 +250,7 @@ public class Renderer
 			for (int x = newX; x < newWidth; x++)
 			{
 				setPixel(x + offX, y + offY, image.getPixels()[(x + tileX * image.getTileWidth()) + (y + tileY * image.getTileHeight()) * image.getWidth()]);
+				setLightBlock(x + offX, y + offY, image.getLightBlock());
 			}
 		}
 	}
@@ -253,6 +309,71 @@ public class Renderer
 			for (int x = newX; x < newWidth; x++)
 			{
 				setPixel(x + offX, y + offY, color);
+			}
+		}
+	}
+
+	public void drawLight(Light light, int offX, int offY)
+	{
+		if (!processing)
+		{
+			lightRequests.add(new LightRequest(light, zDepth, offX, offY));
+			return;
+		}
+		for (int i = 0; i <= light.getDiameter(); i++)
+		{
+			drawLightLine(light, light.getRadius(), light.getRadius(), i, 0, offX, offY);
+			drawLightLine(light, light.getRadius(), light.getRadius(), i, light.getDiameter(), offX, offY);
+			drawLightLine(light, light.getRadius(), light.getRadius(), 0, i, offX, offY);
+			drawLightLine(light, light.getRadius(), light.getRadius(), light.getDiameter(), i, offX, offY);
+		}
+	}
+
+	private void drawLightLine(Light light, int x0, int y0, int x1, int y1, int offX, int offY)
+	{
+		// Bresenhams line algorithm?
+		int dx = Math.abs(x1 - x0);
+		int dy = Math.abs(y1 - y0);
+
+		int sx = x0 < x1 ? 1 : -1;
+		int sy = y0 < y1 ? 1 : -1;
+
+		int err = dx - dy;
+		int err2;
+
+		while (true)
+		{
+			int screenX = x0 - light.getRadius() + offX;
+			int screenY = y0 - light.getRadius() + offY;
+
+			// Check if light line is off the screen
+			if (screenX < 0 || screenX >= maxWidth || screenY < 0 || screenY >= maxHeight)
+				return;
+
+			// Don't bother rendering if there is no light
+			int lightColor = light.getLightValue(x0, y0);
+			if (lightColor == 0)
+				return;
+
+			// Don't render if there is a light block in a lower Z-Level
+			if (zBuffer[screenX + screenY * maxWidth] >= zDepth && lightBlocks[screenX + screenY * maxWidth] == Light.BLOCK_FULL)
+				return;
+
+			setLightMap(screenX, screenY, lightColor);
+
+			if (x0 == x1 && y0 == y1)
+				break;
+
+			err2 = 2 * err;
+			if (err2 > -1 * dy)
+			{
+				err -= dy;
+				x0 += sx;
+			}
+			if (err2 < dx)
+			{
+				err += dx;
+				y0 += sy;
 			}
 		}
 	}

@@ -3,6 +3,8 @@ package com.ketcham.engine.gfx;
 public class Font
 {
 	public static final Font STANDARD = new Font("/fonts/font.png");
+	public static final int STARTING_CHARACTER = 32; // " "
+	public static final boolean IS_UPPER_CASE = false;
 	private static final int NUM_CHARACTERS = 59;
 	private final static int CHARACTER_START_COLOR = 0xff0000ff;
 	private final static int CHARACTER_END_COLOR = 0xffffff00;

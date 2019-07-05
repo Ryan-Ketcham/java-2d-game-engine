@@ -9,16 +9,24 @@ public class GameContainer implements Runnable
 	private Thread thread;
 
 	private boolean running = false;
-	private final double UPDATE_CAP = 1.0 / 100.0; // this bottom number sets framerate
 
-	// TODO: these should be passed through to window and renderer
-	private final int width = 340, height = 280;
-	private final float scale = 3f;
-	private final String title = "My Starcraft Clone";
+	private int width = 340, height = 280;
+	private float scale = 3f;
+	private String title = "My Game Engine";
+	private boolean unlockFramerate = true;
+	private double maxFramerate = 100.0;
+	private double UPDATE_CAP;
 
-	public GameContainer(AbstractGame game)
+	public GameContainer(AbstractGame game, String title, int width, int height, float scale, boolean unlockFramerate, double maxFramerate)
 	{
 		this.game = game;
+		this.title = title;
+		this.width = width;
+		this.height = height;
+		this.scale = scale;
+		this.unlockFramerate = unlockFramerate;
+		this.maxFramerate = maxFramerate;
+		this.UPDATE_CAP = 1.0 / maxFramerate;
 	}
 
 	public void start()
@@ -48,7 +56,7 @@ public class GameContainer implements Runnable
 		int fps = 0;
 		while (running)
 		{
-			boolean render = true; // flip this to true to unlock framerate
+			boolean render = unlockFramerate;
 
 			firstTime = System.nanoTime() / 1000000000.0;
 			passedTime = firstTime - lastTime;
@@ -102,6 +110,7 @@ public class GameContainer implements Runnable
 	{
 		try
 		{
+			window.dispose();
 			thread.join();
 			running = false;
 		}
@@ -111,33 +120,34 @@ public class GameContainer implements Runnable
 		}
 	}
 
-	public int getHeight()
+	public int getHeight() { return height; }
+
+	public int getWidth() { return width; }
+
+	public float getScale()	{ return scale; }
+
+	public String getTitle() { return title; }
+
+	public Window getWindow() { return window; }
+
+	public Input getInput()	{ return input;	}
+
+	public boolean isUnlockFramerate() { return unlockFramerate; }
+
+	public void setUnlockFramerate(boolean unlockFramerate) { this.unlockFramerate = unlockFramerate; }
+
+	public double getMaxFramerate()	{ return maxFramerate; }
+
+	public void setMaxFramerate(double maxFramerate)
 	{
-		return height;
+		this.maxFramerate = maxFramerate; this.UPDATE_CAP = 1.0 / maxFramerate;
 	}
 
-	public int getWidth()
-	{
-		return width;
-	}
+	public void setWidth(int width) { this.width = width; }
 
-	public float getScale()
-	{
-		return scale;
-	}
+	public void setHeight(int height) { this.height = height; }
 
-	public String getTitle()
-	{
-		return title;
-	}
+	public void setScale(float scale) { this.scale = scale; }
 
-	public Window getWindow()
-	{
-		return window;
-	}
-
-	public Input getInput()
-	{
-		return input;
-	}
+	public void setTitle(String title) { this.title = title; }
 }

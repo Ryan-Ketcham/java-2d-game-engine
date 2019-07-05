@@ -1,22 +1,22 @@
 package com.ketcham.engine.gfx;
 
-public class ImageRequest
+public class LightRequest
 {
-	private Image image;
+	private Light light;
 	private int zDepth;
 	private int offX, offY;
 
-	public ImageRequest(Image image, int zDepth, int offX, int offY)
+	public LightRequest(Light light, int zDepth, int offX, int offY)
 	{
-		this.image = image;
+		this.light = light;
 		this.zDepth = zDepth;
 		this.offX = offX;
 		this.offY = offY;
 	}
 
-	public Image getImage()
+	public Light getLight()
 	{
-		return image;
+		return light;
 	}
 
 	public int getZDepth()

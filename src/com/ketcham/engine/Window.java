@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Canvas;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.BufferStrategy;
 import javax.swing.JFrame;
@@ -46,6 +47,11 @@ public class Window
     {
         g.drawImage(image, 0, 0, canvas.getWidth(), canvas.getHeight(), null);
         bs.show();
+    }
+
+    public void dispose()
+    {
+        frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
     }
 
     public JFrame getFrame()
